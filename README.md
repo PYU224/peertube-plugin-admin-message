@@ -57,26 +57,6 @@ PeerTube v7以降で動画・配信ページの説明欄下にインスタンス
 </ul>
 ```
 
-## 開発
-
-### 必要な環境
-- Node.js 18+
-- npm
-- PeerTube 7.0+
-
-### ファイル構成
-```
-├── server/
-│   └── main.ts                      # サーバーサイドエントリーポイント
-├── client/
-│   ├── tsconfig.json                # クライアント用TypeScript設定
-│   └── video-watch-client-plugin.ts # クライアントサイドスクリプト
-├── package.json                     # パッケージ定義
-├── manifest.json                    # プラグインマニフェスト
-├── tsconfig.json                    # サーバー用TypeScript設定
-└── README.md                        # このファイル
-```
-
 ## セキュリティ
 
 - **DOMPurify**によるHTMLサニタイゼーション
@@ -85,7 +65,7 @@ PeerTube v7以降で動画・配信ページの説明欄下にインスタンス
 
 ## ライセンス
 
-MIT License
+AGPL-3.0 license
 
 ## サポート
 

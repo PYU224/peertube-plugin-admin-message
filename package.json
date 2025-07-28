@@ -30,7 +30,7 @@
   ],
   "clientScripts": [
     {
-      "script": "./dist/client/video-watch-client-plugin.js",
+      "script": "./client-scripts/video-watch-client-plugin.js",
       "scopes": [
         "video-watch"
       ]

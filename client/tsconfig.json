@@ -1,27 +1,10 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ES2020",
-    "moduleResolution": "node",
     "lib": ["ES2020", "DOM"],
-    "outDir": "../client-scripts",
-    "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "removeComments": false
+    "outDir": "../dist/client"
   },
   "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "../dist",
-    "../server"
+    "./**/*.ts"
   ]
 }

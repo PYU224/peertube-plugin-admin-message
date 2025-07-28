@@ -1,36 +1,36 @@
 {
   "name": "peertube-plugin-admin-message",
   "description": "Display admin messages below video and live stream descriptions",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "PYU224",
   "bugs": "https://github.com/PYU224/peertube-plugin-admin-message/issues",
   "scripts": {
     "prepare": "npm run build",
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "cd server && npx tsc",
-    "build:client": "cd client && npx tsc",
-    "dev": "npm run dev:server & npm run dev:client",
-    "dev:server": "cd server && npx tsc --watch",
-    "dev:client": "cd client && npx tsc --watch"
+    "build": "npm run build:tsc-client && npm run build:tsc-server",
+    "build:tsc-client": "npx tsc --build client/tsconfig.json",
+    "build:tsc-server": "npx tsc --build server/tsconfig.json",
+    "dev": "npm run build:tsc-client -- --watch & npm run build:tsc-server -- --watch"
   },
   "engine": {
     "peertube": ">=7.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/PYU224/peertube-plugin-admin-message.git"
+    "url": "git+https://github.com/PYU224/peertube-plugin-admin-message.git"
   },
-  "homepage": "https://github.com/PYU224",
+  "homepage": "https://github.com/PYU224/peertube-plugin-admin-message",
   "keywords": [
     "peertube",
     "plugin",
     "admin",
     "message",
-    "notification"
+    "notification",
+    "markdown",
+    "html"
   ],
   "clientScripts": [
     {
-      "script": "./client-scripts/video-watch-client-plugin.js",
+      "script": "./dist/client/video-watch-client-plugin.js",
       "scopes": [
         "video-watch"
       ]
@@ -42,7 +42,8 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
   },
-  "staticDirs": {
-    "public": "./dist/public"
-  }
+  "files": [
+    "dist/"
+  ],
+  "license": "MIT"
 }

@@ -1,7 +1,7 @@
 {
   "name": "peertube-plugin-admin-message",
   "description": "Display admin messages below video and live stream descriptions",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "PYU224",
   "bugs": "https://github.com/PYU224/peertube-plugin-admin-message/issues",
   "scripts": {
@@ -30,7 +30,7 @@
   ],
   "clientScripts": [
     {
-      "script": "./dist/client/video-watch-client-plugin.js",
+      "script": "./video-watch-client-plugin.js",
       "scopes": [
         "video-watch"
       ]
@@ -43,7 +43,9 @@
     "typescript": "^5.0.0"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "video-watch-client-plugin.js",
+    "video-watch-client-plugin.d.ts"
   ],
   "license": "MIT"
 }

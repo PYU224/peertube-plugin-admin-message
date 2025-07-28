@@ -1,0 +1,55 @@
+{
+  "manifestVersion": 1,
+  "id": "peertube-plugin-admin-message",
+  "name": "Admin Message Display",
+  "description": "Display administrator messages below video and live stream descriptions with Markdown/HTML support",
+  "author": "PYU224",
+  "license": "MIT",
+  "version": "1.0.0",
+  "mainScript": "server/main.js",
+  "clientScripts": [
+    {
+      "script": "client/video-watch-client-plugin.js",
+      "scopes": ["video-watch"]
+    }
+  ],
+  "settings": [
+    {
+      "id": "messageEnabled",
+      "type": "boolean",
+      "default": true,
+      "label": "Enable Admin Message"
+    },
+    {
+      "id": "adminMessage",
+      "type": "textarea",
+      "default": "",
+      "label": "Admin Message Content"
+    },
+    {
+      "id": "messageStyle",
+      "type": "select",
+      "default": "info",
+      "options": [
+        { "label": "Info (Blue)", "value": "info" },
+        { "label": "Warning (Orange)", "value": "warning" },
+        { "label": "Success (Green)", "value": "success" },
+        { "label": "Error (Red)", "value": "error" },
+        { "label": "Default", "value": "default" }
+      ],
+      "label": "Message Style"
+    },
+    {
+      "id": "showOnVideoWatch",
+      "type": "boolean",
+      "default": true,
+      "label": "Show on Video Pages"
+    },
+    {
+      "id": "showOnLiveWatch",
+      "type": "boolean",
+      "default": true,
+      "label": "Show on Live Pages"
+    }
+  ]
+}

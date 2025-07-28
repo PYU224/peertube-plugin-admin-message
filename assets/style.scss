@@ -1,0 +1,200 @@
+.admin-message {
+  margin: 20px 0;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: inherit;
+
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  &-title {
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: 600;
+  }
+
+  &-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &-content {
+    line-height: 1.6;
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: none;
+      }
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+
+    ul, ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    blockquote {
+      margin: 16px 0;
+      padding: 8px 16px;
+      border-left: 3px solid rgba(0, 0, 0, 0.2);
+      background-color: rgba(0, 0, 0, 0.05);
+      font-style: italic;
+    }
+
+    code {
+      background-color: rgba(0, 0, 0, 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background-color: rgba(0, 0, 0, 0.05);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 12px 0;
+
+      code {
+        background-color: transparent;
+        padding: 0;
+      }
+    }
+  }
+
+  // 言語別フォント調整
+  &[data-language="ja"] {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", Meiryo, sans-serif;
+  }
+
+  &[data-language="en"] {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  // スタイル別の色設定
+  &-info {
+    background-color: #e3f2fd;
+    border-left-color: #2196f3;
+    color: #0d47a1;
+  }
+
+  &-warning {
+    background-color: #fff3e0;
+    border-left-color: #ff9800;
+    color: #e65100;
+  }
+
+  &-success {
+    background-color: #e8f5e8;
+    border-left-color: #4caf50;
+    color: #1b5e20;
+  }
+
+  &-error {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+    color: #b71c1c;
+  }
+}
+
+// レスポンシブ対応
+@media (max-width: 768px) {
+  .admin-message {
+    margin: 16px 0;
+    padding: 12px;
+
+    &-title {
+      font-size: 1em;
+    }
+
+    &-content {
+      font-size: 0.95em;
+    }
+  }
+}
+
+// ダークモード対応
+@media (prefers-color-scheme: dark) {
+  .admin-message {
+    &-info {
+      background-color: #1a2332;
+      color: #90caf9;
+    }
+
+    &-warning {
+      background-color: #2d1b00;
+      color: #ffcc02;
+    }
+
+    &-success {
+      background-color: #1b2f1b;
+      color: #a5d6a7;
+    }
+
+    &-error {
+      background-color: #321212;
+      color: #ef5350;
+    }
+
+    &-close:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &-content {
+      blockquote {
+        border-left-color: rgba(255, 255, 255, 0.3);
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      code {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      pre {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+    }
+  }
+}

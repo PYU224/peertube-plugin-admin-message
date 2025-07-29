@@ -1,0 +1,126 @@
+.admin-message {
+  margin: 15px 0;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Light theme styles */
+.admin-message-info {
+  background-color: #e3f2fd;
+  border-left-color: #2196f3;
+  color: #0d47a1;
+}
+
+.admin-message-warning {
+  background-color: #fff3e0;
+  border-left-color: #ff9800;
+  color: #e65100;
+}
+
+.admin-message-success {
+  background-color: #e8f5e8;
+  border-left-color: #4caf50;
+  color: #2e7d32;
+}
+
+.admin-message-error {
+  background-color: #ffebee;
+  border-left-color: #f44336;
+  color: #c62828;
+}
+
+.admin-message-default {
+  background-color: #f5f5f5;
+  border-left-color: #757575;
+  color: #424242;
+}
+
+/* Dark theme styles */
+body.dark .admin-message-info {
+  background-color: #1a237e;
+  border-left-color: #64b5f6;
+  color: #bbdefb;
+}
+
+body.dark .admin-message-warning {
+  background-color: #e65100;
+  border-left-color: #ffb74d;
+  color: #ffe0b2;
+}
+
+body.dark .admin-message-success {
+  background-color: #1b5e20;
+  border-left-color: #81c784;
+  color: #c8e6c9;
+}
+
+body.dark .admin-message-error {
+  background-color: #b71c1c;
+  border-left-color: #e57373;
+  color: #ffcdd2;
+}
+
+body.dark .admin-message-default {
+  background-color: #424242;
+  border-left-color: #bdbdbd;
+  color: #e0e0e0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .admin-message {
+    margin: 10px 0;
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
+/* Links styling */
+.admin-message a {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.admin-message a:hover {
+  opacity: 0.8;
+}
+
+/* Lists styling */
+.admin-message ul,
+.admin-message ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.admin-message li {
+  margin: 4px 0;
+}
+
+/* Headers styling */
+.admin-message h1,
+.admin-message h2,
+.admin-message h3,
+.admin-message h4,
+.admin-message h5,
+.admin-message h6 {
+  margin: 10px 0 8px 0;
+  font-weight: 600;
+}
+
+.admin-message h1 { font-size: 1.5em; }
+.admin-message h2 { font-size: 1.4em; }
+.admin-message h3 { font-size: 1.3em; }
+.admin-message h4 { font-size: 1.2em; }
+.admin-message h5 { font-size: 1.1em; }
+.admin-message h6 { font-size: 1em; }

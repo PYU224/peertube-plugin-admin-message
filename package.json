@@ -16,7 +16,9 @@
     "url": "https://github.com/PYU224/peertube-plugin-admin-message.git"
   },
   "license": "AGPL-3.0",
-  "peertubeEngine": ">=7.0.0",
+  "engines": {
+    "peertube": ">=7.0.0"
+  },
   "keywords": [
     "peertube",
     "plugin",
@@ -28,31 +30,26 @@
   "clientScripts": [
     {
       "script": "./dist/video-watch-client-plugin.js",
-      "scopes": [
-        "video-watch"
-      ]
+      "scopes": ["video-watch"]
     }
   ],
   "css": [
     "./dist/admin-message-styles.css"
   ],
-  "staticDirs": {
-    "images": "./images"
-  },
+  "staticDirs": {},
   "library": "./main.js",
   "scripts": {
-    "build": "npm run build:client && npm run build:css",
+    "build": "npm run clean && npm run build:client && npm run build:css",
     "build:client": "tsc",
-    "build:css": "cp src/admin-message-styles.css dist/",
+    "build:css": "node -e \"const fs = require('fs'); const path = require('path'); if (!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.copyFileSync('src/admin-message-styles.css', 'dist/admin-message-styles.css');\"",
     "dev": "npm run build && npm run dev:watch",
     "dev:watch": "tsc --watch",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });\"",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "main.js",
     "dist/",
-    "images/",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -60,8 +57,5 @@
   "devDependencies": {
     "@peertube/peertube-types": "^7.2.1",
     "typescript": "^5.3.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }

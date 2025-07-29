@@ -49,6 +49,19 @@ async function register({ registerSetting, settingsManager, storageManager, vide
     descriptionHTML: 'Display the message on live streaming pages'
   })
 
+  registerSetting({
+    name: 'insert-position',
+    label: 'Message Insert Position',
+    type: 'select',
+    options: [
+      { label: '動画のすぐ下〜説明欄の間', value: 'before-description' },
+      { label: '説明欄の下〜コメント欄の間（デフォルト）', value: 'after-description' },
+      { label: 'コメント欄のすぐ下', value: 'after-comments' }
+    ],
+    default: 'after-description',
+    descriptionHTML: 'Choose where to display the admin message on the page'
+  })
+
   console.log('PeerTube Admin Message Plugin registered successfully')
 }
 

@@ -25,8 +25,12 @@ function register(options: RegisterClientOptions) {
     try {
       // プラグイン設定を取得
       const settings = await peertubeHelpers.getSettings()
+      console.log('Admin Message Plugin: Retrieved settings', settings)
       
-      if (!settings['enable-admin-message']) {
+      const isEnabled = settings['enable-admin-message']
+      console.log('Admin Message Plugin: Enable setting value:', isEnabled)
+      
+      if (!isEnabled) {
         console.log('Admin Message Plugin: Disabled in settings')
         return
       }
@@ -35,6 +39,15 @@ function register(options: RegisterClientOptions) {
       const messageStyle = (settings['message-style'] as string) || 'info'
       const showOnVideo = settings['show-on-video-pages'] as boolean
       const showOnLive = settings['show-on-live-pages'] as boolean
+      const insertPosition = (settings['insert-position'] as string) || 'after-description'
+
+      console.log('Admin Message Plugin: Settings loaded', {
+        messageContent,
+        messageStyle,
+        showOnVideo,
+        showOnLive,
+        insertPosition
+      })
 
       if (!messageContent) {
         console.log('Admin Message Plugin: No message content')
@@ -64,7 +77,7 @@ function register(options: RegisterClientOptions) {
       messageContainer.innerHTML = sanitizeBasicHtml(messageContent)
 
       // 説明欄の下に挿入
-      insertMessageAfterDescription(messageContainer)
+      insertMessageAtPosition(messageContainer, insertPosition)
 
     } catch (error) {
       console.error('Admin Message Plugin: Error displaying message', error)
@@ -99,13 +112,61 @@ function register(options: RegisterClientOptions) {
     return sanitized
   }
 
-  function insertMessageAfterDescription(messageElement: HTMLElement) {
-    // 説明欄を探す（PeerTubeのDOM構造に依存）
+  function insertMessageAtPosition(messageElement: HTMLElement, position: string) {
+    console.log('Admin Message Plugin: Inserting message at position:', position)
+    
+    switch (position) {
+      case 'before-description':
+        insertBeforeDescription(messageElement)
+        break
+      case 'after-description':
+        insertAfterDescription(messageElement)
+        break
+      case 'after-comments':
+        insertAfterComments(messageElement)
+        break
+      default:
+        insertAfterDescription(messageElement)
+    }
+  }
+
+  function insertBeforeDescription(messageElement: HTMLElement) {
+    // 動画の下、説明欄の前に挿入
+    const videoSelectors = [
+      '.video-info-name',
+      '.video-title',
+      'my-video-watch-video'
+    ]
+
+    let targetElement: Element | null = null
+    for (const selector of videoSelectors) {
+      targetElement = document.querySelector(selector)
+      if (targetElement) break
+    }
+
+    if (targetElement && targetElement.parentNode) {
+      targetElement.parentNode.insertBefore(messageElement, targetElement.nextSibling)
+      console.log('Admin Message Plugin: Message inserted before description')
+    } else {
+      // フォールバック: video-info コンテナの最初に追加
+      const videoInfoContainer = document.querySelector('.video-info, .video-details, .video-watch-info')
+      if (videoInfoContainer) {
+        videoInfoContainer.insertBefore(messageElement, videoInfoContainer.firstChild)
+        console.log('Admin Message Plugin: Message prepended to video info container')
+      } else {
+        insertAfterDescription(messageElement) // さらなるフォールバック
+      }
+    }
+  }
+
+  function insertAfterDescription(messageElement: HTMLElement) {
+    // 説明欄の下に挿入（元の機能）
     const descriptionSelectors = [
       '.video-info-description',
       '.video-description',
       '[data-qa-id="video-description"]',
-      '.description-html'
+      '.description-html',
+      '.video-info-description-more'
     ]
 
     let descriptionElement: Element | null = null
@@ -116,7 +177,6 @@ function register(options: RegisterClientOptions) {
     }
 
     if (descriptionElement && descriptionElement.parentNode) {
-      // 説明欄の後に挿入
       descriptionElement.parentNode.insertBefore(messageElement, descriptionElement.nextSibling)
       console.log('Admin Message Plugin: Message inserted after description')
     } else {
@@ -129,6 +189,37 @@ function register(options: RegisterClientOptions) {
         // 最後の手段: bodyに追加
         document.body.appendChild(messageElement)
         console.log('Admin Message Plugin: Message appended to body as fallback')
+      }
+    }
+  }
+
+  function insertAfterComments(messageElement: HTMLElement) {
+    // コメント欄の下に挿入
+    const commentsSelectors = [
+      '.comments',
+      'my-video-comments',
+      '.video-comments',
+      '#comments'
+    ]
+
+    let commentsElement: Element | null = null
+    
+    for (const selector of commentsSelectors) {
+      commentsElement = document.querySelector(selector)
+      if (commentsElement) break
+    }
+
+    if (commentsElement && commentsElement.parentNode) {
+      commentsElement.parentNode.insertBefore(messageElement, commentsElement.nextSibling)
+      console.log('Admin Message Plugin: Message inserted after comments')
+    } else {
+      // フォールバック: ページの最後に追加
+      const mainContent = document.querySelector('main, .main-col, .video-watch')
+      if (mainContent) {
+        mainContent.appendChild(messageElement)
+        console.log('Admin Message Plugin: Message appended to main content')
+      } else {
+        insertAfterDescription(messageElement) // さらなるフォールバック
       }
     }
   }

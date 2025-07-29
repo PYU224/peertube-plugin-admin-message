@@ -1,20 +1,11 @@
 {
   "name": "peertube-plugin-admin-message",
-  "version": "1.0.9",
+  "version": "1.0.8",
   "description": "動画・配信ページの説明欄下にインスタンス管理者からのメッセージを表示するプラグインです。",
   "main": "./main.js",
   "homepage": "https://github.com/PYU224/peertube-plugin-admin-message",
-  "author": {
-    "name": "PYU224",
-    "url": "https://github.com/PYU224"
-  },
-  "bugs": {
-    "url": "https://github.com/PYU224/peertube-plugin-admin-message/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/PYU224/peertube-plugin-admin-message.git"
-  },
+  "author": "PYU224",
+  "bugs": "https://github.com/PYU224/peertube-plugin-admin-message/issues",
   "license": "AGPL-3.0",
   "engine": {
     "peertube": ">=7.0.0"
@@ -30,9 +21,7 @@
   "clientScripts": [
     {
       "script": "./dist/video-watch-client-plugin.js",
-      "scopes": [
-        "video-watch"
-      ]
+      "scopes": ["video-watch"]
     }
   ],
   "css": [
@@ -52,12 +41,12 @@
   "files": [
     "main.js",
     "dist/",
-    "README.md",
-    "CHANGELOG.md"
+    "README.md"
   ],
   "dependencies": {},
   "devDependencies": {
     "@peertube/peertube-types": "^7.2.1",
     "typescript": "^5.3.0"
-  }
+  },
+  "translations": {}
 }

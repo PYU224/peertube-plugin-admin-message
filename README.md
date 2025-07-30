@@ -1,5 +1,11 @@
 # PeerTube Admin Message Plugin
 
+<div align="center">
+
+<p><img alt="PeerTube Message" src="./sample.png" width="320" height="auto"></p>
+
+</div>
+
 PeerTube v7以降で動画・配信ページの説明欄下にインスタンス管理者からのメッセージを表示するプラグインです。<br>
 上手い使い道はあまり思いつかないんですが、何かに使ってくれれば幸いです。
 

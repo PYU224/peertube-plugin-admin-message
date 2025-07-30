@@ -29,7 +29,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
       { label: '警告（オレンジ）', value: 'warning' },
       { label: '成功（緑）', value: 'success' },
       { label: 'エラー（赤）', value: 'error' },
-      { label: 'デフォルト（グレー）', value: 'default' }
+      { label: 'デフォルト（グレー）', value: 'default' },
+      { label: 'その他（透明・無色）', value: 'transparent' }
     ],
     default: 'info',
     descriptionHTML: '管理者メッセージの外観スタイル'
@@ -64,6 +65,19 @@ async function register({ registerSetting, settingsManager, storageManager, vide
     descriptionHTML: 'ページ内でのメッセージ表示位置を選択してください'
   })
 
+  registerSetting({
+    name: 'font-size',
+    label: '文字サイズ',
+    type: 'select',
+    options: [
+      { label: '標準（16px）', value: 'normal' },
+      { label: '大（18px）', value: 'large' },
+      { label: '特大（20px）', value: 'extra-large' }
+    ],
+    default: 'normal',
+    descriptionHTML: 'メッセージの文字サイズを選択してください'
+  })
+
   // PeerTube 7.2.1 用のAPIエンドポイント登録
   // クライアントサイドから設定を取得できるようにする
   if (peertubeHelpers.registerApi) {
@@ -78,7 +92,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
             'message-style',
             'show-on-video-pages',
             'show-on-live-pages',
-            'insert-position'
+            'insert-position',
+            'font-size'
           ])
           
           console.log('Admin Message Plugin: API settings request', settings)

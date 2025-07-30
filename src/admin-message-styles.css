@@ -3,8 +3,8 @@
   padding: 15px;
   border-radius: 8px;
   border-left: 4px solid;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 16px; /* 14px から 16px に変更 */
+  line-height: 1.6; /* 1.5 から 1.6 に変更で読みやすさ向上 */
   position: relative;
   animation: fadeIn 0.3s ease-in;
 }
@@ -45,6 +45,15 @@
   color: #424242;
 }
 
+/* 新規追加: 透明スタイル */
+.admin-message-transparent {
+  background-color: transparent;
+  border-left-color: transparent;
+  color: inherit; /* 親要素の文字色を継承 */
+  border-left: none; /* 左の境界線を完全に削除 */
+  padding-left: 0; /* 左パディングも調整 */
+}
+
 /* Dark theme styles */
 body.dark .admin-message-info {
   background-color: #1a237e;
@@ -76,12 +85,26 @@ body.dark .admin-message-default {
   color: #e0e0e0;
 }
 
+/* ダークテーマでも透明スタイルは透明のまま */
+body.dark .admin-message-transparent {
+  background-color: transparent;
+  border-left-color: transparent;
+  color: inherit;
+  border-left: none;
+  padding-left: 0;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .admin-message {
     margin: 10px 0;
     padding: 12px;
-    font-size: 13px;
+    font-size: 15px; /* モバイルでも 13px から 15px に変更 */
+  }
+  
+  /* モバイルでの透明スタイル調整 */
+  .admin-message-transparent {
+    padding-left: 0;
   }
 }
 
@@ -94,6 +117,15 @@ body.dark .admin-message-default {
 
 .admin-message a:hover {
   opacity: 0.8;
+}
+
+/* 透明スタイルでのリンク調整 */
+.admin-message-transparent a {
+  color: #007bff; /* 透明背景の場合はリンク色を明示的に設定 */
+}
+
+body.dark .admin-message-transparent a {
+  color: #64b5f6; /* ダークテーマでのリンク色 */
 }
 
 /* Lists styling */
@@ -118,9 +150,27 @@ body.dark .admin-message-default {
   font-weight: 600;
 }
 
-.admin-message h1 { font-size: 1.5em; }
-.admin-message h2 { font-size: 1.4em; }
-.admin-message h3 { font-size: 1.3em; }
-.admin-message h4 { font-size: 1.2em; }
-.admin-message h5 { font-size: 1.1em; }
-.admin-message h6 { font-size: 1em; }
+.admin-message h1 { font-size: 1.6em; } /* 1.5em から 1.6em に */
+.admin-message h2 { font-size: 1.5em; } /* 1.4em から 1.5em に */
+.admin-message h3 { font-size: 1.4em; } /* 1.3em から 1.4em に */
+.admin-message h4 { font-size: 1.3em; } /* 1.2em から 1.3em に */
+.admin-message h5 { font-size: 1.2em; } /* 1.1em から 1.2em に */
+.admin-message h6 { font-size: 1.1em; } /* 1em から 1.1em に */
+
+/* 文字の太さをオプションで調整可能にする追加クラス */
+.admin-message-bold {
+  font-weight: 600;
+}
+
+.admin-message-normal {
+  font-weight: 400;
+}
+
+/* 追加: より大きな文字サイズオプション */
+.admin-message-large {
+  font-size: 18px;
+}
+
+.admin-message-extra-large {
+  font-size: 20px;
+}

@@ -78,6 +78,7 @@ function register(options: RegisterClientOptions) {
 
       const messageContent = getSettingValue('admin-message-content') as string
       const messageStyle = getSettingValue('message-style') as string || 'info'
+      const fontSize = getSettingValue('font-size') as string || 'normal'
       const showOnVideo = getSettingValue('show-on-video-pages') ?? true
       const showOnLive = getSettingValue('show-on-live-pages') ?? true
       const insertPosition = getSettingValue('insert-position') as string || 'after-description'
@@ -86,6 +87,7 @@ function register(options: RegisterClientOptions) {
         isEnabled,
         messageContent: messageContent?.substring(0, 50) + '...',
         messageStyle,
+        fontSize,
         showOnVideo,
         showOnLive,
         insertPosition
@@ -123,7 +125,18 @@ function register(options: RegisterClientOptions) {
       // メッセージコンテナを作成
       const messageContainer = document.createElement('div')
       messageContainer.id = 'admin-message-container'
-      messageContainer.className = `admin-message admin-message-${messageStyle}`
+      
+      // スタイルクラスを設定
+      let className = `admin-message admin-message-${messageStyle}`
+      
+      // 文字サイズクラスを追加
+      if (fontSize === 'large') {
+        className += ' admin-message-large'
+      } else if (fontSize === 'extra-large') {
+        className += ' admin-message-extra-large'
+      }
+      
+      messageContainer.className = className
       messageContainer.innerHTML = sanitizeBasicHtml(messageContent)
 
       console.log('Admin Message Plugin: Created message container')

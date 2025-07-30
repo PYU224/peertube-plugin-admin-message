@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<p><img alt="PeerTube Message" src="./sample.png" width="auto" height="auto"></p>
+<p><img alt="PeerTube Message" src="https://raw.githubusercontent.com/PYU224/peertube-plugin-admin-message/main/sample.png" width="auto" height="auto"></p>
 
 </div>
 

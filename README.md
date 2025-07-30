@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<p><img alt="PeerTube Message" src="./sample.png" width="320" height="auto"></p>
+<p><img alt="PeerTube Message" src="./sample.png" width="auto" height="auto"></p>
 
 </div>
 

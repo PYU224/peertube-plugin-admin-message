@@ -3,106 +3,184 @@ import { RegisterClientOptions } from '@peertube/peertube-types/client'
 function register(options: RegisterClientOptions) {
   const { registerHook, peertubeHelpers } = options
 
+  console.log('Admin Message Plugin: Registering hooks for PeerTube 7.2.1')
+
   // 動画視聴ページが読み込まれた時のフック
   registerHook({
     target: 'action:video-watch.init',
     handler: () => {
       console.log('Admin Message Plugin: Video watch page initialized')
-      displayAdminMessage()
+      // DOM の準備を待つためにより長い遅延
+      setTimeout(() => displayAdminMessage(), 1500)
     }
   })
 
-  // ライブ配信ページが読み込まれた時のフック
+  // 動画データが読み込まれた時のフック
   registerHook({
     target: 'action:video-watch.video.loaded',
     handler: () => {
       console.log('Admin Message Plugin: Video loaded')
-      displayAdminMessage()
+      setTimeout(() => displayAdminMessage(), 2000)
+    }
+  })
+
+  // ページナビゲーション後のフック
+  registerHook({
+    target: 'action:router.navigation-end',
+    handler: () => {
+      if (window.location.pathname.includes('/watch/') || window.location.pathname.includes('/w/')) {
+        console.log('Admin Message Plugin: Navigation ended on video page')
+        setTimeout(() => displayAdminMessage(), 2500)
+      }
     }
   })
 
   async function displayAdminMessage() {
     try {
+      console.log('Admin Message Plugin: Starting displayAdminMessage()')
+      
+      // 既存のメッセージを削除
+      const existingMessage = document.getElementById('admin-message-container')
+      if (existingMessage) {
+        existingMessage.remove()
+        console.log('Admin Message Plugin: Removed existing message')
+      }
+
       // プラグイン設定を取得
-      const settings = await peertubeHelpers.getSettings()
-      console.log('Admin Message Plugin: Retrieved settings', settings)
+      let settings: any = {}
       
-      const isEnabled = settings['enable-admin-message']
-      console.log('Admin Message Plugin: Enable setting value:', isEnabled)
+      try {
+        // PeerTube 7.2.1 では getSettings() の挙動が安定している
+        settings = await peertubeHelpers.getSettings()
+        console.log('Admin Message Plugin: Raw settings object:', settings)
+        console.log('Admin Message Plugin: Settings keys:', Object.keys(settings))
+      } catch (error) {
+        console.error('Admin Message Plugin: Error getting settings', error)
+        return
+      }
+
+      // PeerTube 7.2.1 では設定キーにプラグイン名のプレフィックスが付く場合がある
+      const getSettingValue = (key: string) => {
+        return settings[key] ?? 
+               settings[`admin-message-${key}`] ?? 
+               settings[`peertube-plugin-admin-message-${key}`] ??
+               null
+      }
+
+      const isEnabled = getSettingValue('enable-admin-message')
+      console.log('Admin Message Plugin: Enable setting value:', isEnabled, typeof isEnabled)
       
-      if (!isEnabled) {
+      // boolean チェックを厳密に
+      if (isEnabled === false || isEnabled === 'false') {
         console.log('Admin Message Plugin: Disabled in settings')
         return
       }
 
-      const messageContent = settings['admin-message-content'] as string
-      const messageStyle = (settings['message-style'] as string) || 'info'
-      const showOnVideo = settings['show-on-video-pages'] as boolean
-      const showOnLive = settings['show-on-live-pages'] as boolean
-      const insertPosition = (settings['insert-position'] as string) || 'after-description'
+      const messageContent = getSettingValue('admin-message-content') as string
+      const messageStyle = getSettingValue('message-style') as string || 'info'
+      const showOnVideo = getSettingValue('show-on-video-pages') ?? true
+      const showOnLive = getSettingValue('show-on-live-pages') ?? true
+      const insertPosition = getSettingValue('insert-position') as string || 'after-description'
 
-      console.log('Admin Message Plugin: Settings loaded', {
-        messageContent,
+      console.log('Admin Message Plugin: Processed settings:', {
+        isEnabled,
+        messageContent: messageContent?.substring(0, 50) + '...',
         messageStyle,
         showOnVideo,
         showOnLive,
         insertPosition
       })
 
-      if (!messageContent) {
-        console.log('Admin Message Plugin: No message content')
+      if (!messageContent || messageContent.trim() === '') {
+        console.log('Admin Message Plugin: No message content found')
         return
       }
 
       // 現在のページタイプを判定
       const isLivePage = window.location.pathname.includes('/live/')
-      const isVideoPage = window.location.pathname.includes('/watch/')
+      const isVideoPage = window.location.pathname.includes('/watch/') || window.location.pathname.includes('/w/')
 
-      if (isLivePage && !showOnLive) return
-      if (isVideoPage && !showOnVideo) return
+      console.log('Admin Message Plugin: Page type check', { 
+        isLivePage, 
+        isVideoPage, 
+        pathname: window.location.pathname,
+        showOnVideo,
+        showOnLive
+      })
 
-      // メッセージ要素が既に存在する場合は削除
-      const existingMessage = document.getElementById('admin-message-container')
-      if (existingMessage) {
-        existingMessage.remove()
+      if (isLivePage && showOnLive === false) {
+        console.log('Admin Message Plugin: Live page but live display disabled')
+        return
       }
+      if (isVideoPage && showOnVideo === false) {
+        console.log('Admin Message Plugin: Video page but video display disabled')
+        return
+      }
+
+      // PeerTube 7.2.1 の DOM 構造を確認
+      await waitForDOMReady()
 
       // メッセージコンテナを作成
       const messageContainer = document.createElement('div')
       messageContainer.id = 'admin-message-container'
       messageContainer.className = `admin-message admin-message-${messageStyle}`
-      
-      // HTMLコンテンツを設定（基本的なサニタイゼーション）
-      // 管理者が安全なHTMLを入力することを前提として、基本的なマークダウン記法をサポート
       messageContainer.innerHTML = sanitizeBasicHtml(messageContent)
 
-      // 説明欄の下に挿入
-      insertMessageAtPosition(messageContainer, insertPosition)
+      console.log('Admin Message Plugin: Created message container')
+
+      // メッセージを挿入
+      const inserted = await insertMessageAtPosition(messageContainer, insertPosition)
+      
+      if (inserted) {
+        console.log('Admin Message Plugin: Message successfully inserted')
+      } else {
+        console.error('Admin Message Plugin: Failed to insert message')
+      }
 
     } catch (error) {
-      console.error('Admin Message Plugin: Error displaying message', error)
+      console.error('Admin Message Plugin: Error in displayAdminMessage', error)
     }
+  }
+
+  // DOM の準備を待つ関数
+  async function waitForDOMReady(): Promise<void> {
+    const maxAttempts = 10
+    let attempts = 0
+
+    return new Promise((resolve) => {
+      const checkDOM = () => {
+        attempts++
+        
+        // PeerTube 7.2.1 の主要な要素をチェック
+        const videoInfo = document.querySelector('my-video-watch-video-info')
+        const videoDetails = document.querySelector('.video-info')
+        const description = document.querySelector('.video-info-description')
+        
+        console.log(`Admin Message Plugin: DOM check attempt ${attempts}:`, {
+          videoInfo: !!videoInfo,
+          videoDetails: !!videoDetails,
+          description: !!description
+        })
+
+        if (videoInfo || videoDetails || description || attempts >= maxAttempts) {
+          resolve()
+        } else {
+          setTimeout(checkDOM, 500)
+        }
+      }
+      
+      checkDOM()
+    })
   }
 
   // 基本的なHTMLサニタイゼーション関数
   function sanitizeBasicHtml(html: string): string {
-    // 基本的な安全性のため、危険なタグとスクリプトを除去
-    const div = document.createElement('div')
-    div.textContent = html
-    let sanitized = div.innerHTML
+    let sanitized = html
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     
-    // 安全なHTMLタグのみ許可
-    const allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre']
-    const tagRegex = /<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^<>]*>/gi
-    
-    // マークダウン風記法を簡単なHTMLに変換
-    sanitized = html
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **bold**
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')              // *italic*
-      .replace(/\n/g, '<br>')                            // 改行をbrタグに
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>') // [text](url)
-    
-    // 危険なイベントハンドラーや javascript: スキームを除去
     sanitized = sanitized
       .replace(/on\w+\s*=\s*["|'][^"']*["|']/gi, '')
       .replace(/javascript:/gi, '')
@@ -112,116 +190,146 @@ function register(options: RegisterClientOptions) {
     return sanitized
   }
 
-  function insertMessageAtPosition(messageElement: HTMLElement, position: string) {
-    console.log('Admin Message Plugin: Inserting message at position:', position)
+  async function insertMessageAtPosition(messageElement: HTMLElement, position: string): Promise<boolean> {
+    console.log('Admin Message Plugin: Attempting to insert at position:', position)
+    
+    // PeerTube 7.2.1 の DOM 構造をログ出力
+    logDOMStructure()
     
     switch (position) {
       case 'before-description':
-        insertBeforeDescription(messageElement)
-        break
+        return insertBeforeDescription(messageElement)
       case 'after-description':
-        insertAfterDescription(messageElement)
-        break
+        return insertAfterDescription(messageElement)
       case 'after-comments':
-        insertAfterComments(messageElement)
-        break
+        return insertAfterComments(messageElement)
       default:
-        insertAfterDescription(messageElement)
+        return insertAfterDescription(messageElement)
     }
   }
 
-  function insertBeforeDescription(messageElement: HTMLElement) {
-    // 動画の下、説明欄の前に挿入
-    const videoSelectors = [
+  function logDOMStructure() {
+    console.log('Admin Message Plugin: Current DOM structure:')
+    
+    // PeerTube 7.2.1 の主要な要素を確認
+    const selectors = [
+      'my-video-watch-video-info',
+      '.video-info',
+      '.video-info-description',
       '.video-info-name',
-      '.video-title',
-      'my-video-watch-video'
+      '.video-info-first-row',
+      'my-video-description',
+      'my-video-comments',
+      '.comments'
     ]
 
-    let targetElement: Element | null = null
-    for (const selector of videoSelectors) {
-      targetElement = document.querySelector(selector)
-      if (targetElement) break
-    }
-
-    if (targetElement && targetElement.parentNode) {
-      targetElement.parentNode.insertBefore(messageElement, targetElement.nextSibling)
-      console.log('Admin Message Plugin: Message inserted before description')
-    } else {
-      // フォールバック: video-info コンテナの最初に追加
-      const videoInfoContainer = document.querySelector('.video-info, .video-details, .video-watch-info')
-      if (videoInfoContainer) {
-        videoInfoContainer.insertBefore(messageElement, videoInfoContainer.firstChild)
-        console.log('Admin Message Plugin: Message prepended to video info container')
+    selectors.forEach(selector => {
+      const element = document.querySelector(selector)
+      if (element) {
+        console.log(`✓ Found: ${selector}`, element)
       } else {
-        insertAfterDescription(messageElement) // さらなるフォールバック
+        console.log(`✗ Not found: ${selector}`)
       }
-    }
+    })
   }
 
-  function insertAfterDescription(messageElement: HTMLElement) {
-    // 説明欄の下に挿入（元の機能）
-    const descriptionSelectors = [
+  function insertBeforeDescription(messageElement: HTMLElement): boolean {
+    // PeerTube 7.2.1 用のセレクタ
+    const selectors = [
+      '.video-info-name',
+      '.video-info-first-row',
+      'my-video-watch-video-info .video-info-name'
+    ]
+
+    for (const selector of selectors) {
+      const targetElement = document.querySelector(selector)
+      if (targetElement && targetElement.parentNode) {
+        targetElement.parentNode.insertBefore(messageElement, targetElement.nextSibling)
+        console.log(`Admin Message Plugin: Inserted before description using ${selector}`)
+        return true
+      }
+    }
+
+    // フォールバック
+    const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
+    if (videoInfo) {
+      videoInfo.appendChild(messageElement)
+      console.log('Admin Message Plugin: Appended to video info container')
+      return true
+    }
+
+    return false
+  }
+
+  function insertAfterDescription(messageElement: HTMLElement): boolean {
+    // PeerTube 7.2.1 用のセレクタ
+    const selectors = [
       '.video-info-description',
-      '.video-description',
-      '[data-qa-id="video-description"]',
-      '.description-html',
+      'my-video-description',
       '.video-info-description-more'
     ]
 
-    let descriptionElement: Element | null = null
-    
-    for (const selector of descriptionSelectors) {
-      descriptionElement = document.querySelector(selector)
-      if (descriptionElement) break
-    }
-
-    if (descriptionElement && descriptionElement.parentNode) {
-      descriptionElement.parentNode.insertBefore(messageElement, descriptionElement.nextSibling)
-      console.log('Admin Message Plugin: Message inserted after description')
-    } else {
-      // フォールバック: video-info コンテナの最後に追加
-      const videoInfoContainer = document.querySelector('.video-info, .video-details, .video-watch-info')
-      if (videoInfoContainer) {
-        videoInfoContainer.appendChild(messageElement)
-        console.log('Admin Message Plugin: Message appended to video info container')
-      } else {
-        // 最後の手段: bodyに追加
-        document.body.appendChild(messageElement)
-        console.log('Admin Message Plugin: Message appended to body as fallback')
+    for (const selector of selectors) {
+      const descriptionElement = document.querySelector(selector)
+      if (descriptionElement && descriptionElement.parentNode) {
+        descriptionElement.parentNode.insertBefore(messageElement, descriptionElement.nextSibling)
+        console.log(`Admin Message Plugin: Inserted after description using ${selector}`)
+        return true
       }
     }
+
+    // フォールバック: video-info コンテナの最後に追加
+    const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
+    if (videoInfo) {
+      videoInfo.appendChild(messageElement)
+      console.log('Admin Message Plugin: Appended to video info container as fallback')
+      return true
+    }
+
+    // 最終フォールバック
+    const mainCol = document.querySelector('.main-col, main')
+    if (mainCol) {
+      // コメント欄の前に挿入を試みる
+      const comments = document.querySelector('my-video-comments, .comments')
+      if (comments) {
+        mainCol.insertBefore(messageElement, comments)
+        console.log('Admin Message Plugin: Inserted before comments as final fallback')
+      } else {
+        mainCol.appendChild(messageElement)
+        console.log('Admin Message Plugin: Appended to main column as ultimate fallback')
+      }
+      return true
+    }
+
+    console.error('Admin Message Plugin: Could not find suitable insertion point')
+    return false
   }
 
-  function insertAfterComments(messageElement: HTMLElement) {
-    // コメント欄の下に挿入
-    const commentsSelectors = [
-      '.comments',
+  function insertAfterComments(messageElement: HTMLElement): boolean {
+    const selectors = [
       'my-video-comments',
-      '.video-comments',
-      '#comments'
+      '.comments',
+      '.video-comments'
     ]
 
-    let commentsElement: Element | null = null
-    
-    for (const selector of commentsSelectors) {
-      commentsElement = document.querySelector(selector)
-      if (commentsElement) break
-    }
-
-    if (commentsElement && commentsElement.parentNode) {
-      commentsElement.parentNode.insertBefore(messageElement, commentsElement.nextSibling)
-      console.log('Admin Message Plugin: Message inserted after comments')
-    } else {
-      // フォールバック: ページの最後に追加
-      const mainContent = document.querySelector('main, .main-col, .video-watch')
-      if (mainContent) {
-        mainContent.appendChild(messageElement)
-        console.log('Admin Message Plugin: Message appended to main content')
-      } else {
-        insertAfterDescription(messageElement) // さらなるフォールバック
+    for (const selector of selectors) {
+      const commentsElement = document.querySelector(selector)
+      if (commentsElement && commentsElement.parentNode) {
+        commentsElement.parentNode.insertBefore(messageElement, commentsElement.nextSibling)
+        console.log(`Admin Message Plugin: Inserted after comments using ${selector}`)
+        return true
       }
     }
+
+    // フォールバック
+    const mainCol = document.querySelector('.main-col, main')
+    if (mainCol) {
+      mainCol.appendChild(messageElement)
+      console.log('Admin Message Plugin: Appended to main column')
+      return true
+    }
+
+    return false
   }
 }
 

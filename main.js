@@ -1,57 +1,59 @@
 async function register({ registerSetting, settingsManager, storageManager, videoCategoryManager, videoLicenceManager, videoLanguageManager, peertubeHelpers }) {
   
+  console.log('Admin Message Plugin: Server-side registration starting for PeerTube 7.2.1')
+
   // プラグイン設定を登録
   registerSetting({
     name: 'enable-admin-message',
-    label: 'Enable Admin Message',
+    label: 'メッセージ表示を有効化',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: 'Enable or disable the admin message display'
+    descriptionHTML: '管理者メッセージの表示を有効または無効にします'
   })
 
   registerSetting({
     name: 'admin-message-content',
-    label: 'Admin Message Content',
+    label: '管理者メッセージ内容',
     type: 'input-textarea',
-    default: 'Welcome to our PeerTube instance!',
-    descriptionHTML: 'The content of the admin message (supports Markdown and safe HTML)',
+    default: 'Welcome to our PeerTube instance!\n\nThis is an admin message.',
+    descriptionHTML: '管理者メッセージの内容（Markdown記法と安全なHTMLがサポートされています）',
     private: false
   })
 
   registerSetting({
     name: 'message-style',
-    label: 'Message Style',
+    label: 'メッセージスタイル',
     type: 'select',
     options: [
-      { label: 'Info', value: 'info' },
-      { label: 'Warning', value: 'warning' },
-      { label: 'Success', value: 'success' },
-      { label: 'Error', value: 'error' },
-      { label: 'Default', value: 'default' }
+      { label: '情報（青）', value: 'info' },
+      { label: '警告（オレンジ）', value: 'warning' },
+      { label: '成功（緑）', value: 'success' },
+      { label: 'エラー（赤）', value: 'error' },
+      { label: 'デフォルト（グレー）', value: 'default' }
     ],
     default: 'info',
-    descriptionHTML: 'The visual style of the admin message'
+    descriptionHTML: '管理者メッセージの外観スタイル'
   })
 
   registerSetting({
     name: 'show-on-video-pages',
-    label: 'Show on Video Pages',
+    label: '動画ページに表示',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: 'Display the message on regular video pages'
+    descriptionHTML: '通常の動画ページにメッセージを表示します'
   })
 
   registerSetting({
     name: 'show-on-live-pages',
-    label: 'Show on Live Pages',
+    label: 'ライブページに表示',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: 'Display the message on live streaming pages'
+    descriptionHTML: 'ライブ配信ページにメッセージを表示します'
   })
 
   registerSetting({
     name: 'insert-position',
-    label: 'Message Insert Position',
+    label: 'メッセージ挿入位置',
     type: 'select',
     options: [
       { label: '動画のすぐ下〜説明欄の間', value: 'before-description' },
@@ -59,14 +61,41 @@ async function register({ registerSetting, settingsManager, storageManager, vide
       { label: 'コメント欄のすぐ下', value: 'after-comments' }
     ],
     default: 'after-description',
-    descriptionHTML: 'Choose where to display the admin message on the page'
+    descriptionHTML: 'ページ内でのメッセージ表示位置を選択してください'
   })
 
-  console.log('PeerTube Admin Message Plugin registered successfully')
+  // PeerTube 7.2.1 用のAPIエンドポイント登録
+  // クライアントサイドから設定を取得できるようにする
+  if (peertubeHelpers.registerApi) {
+    peertubeHelpers.registerApi({
+      method: 'GET',
+      path: '/settings',
+      handler: async (req, res) => {
+        try {
+          const settings = await settingsManager.getSettings([
+            'enable-admin-message',
+            'admin-message-content', 
+            'message-style',
+            'show-on-video-pages',
+            'show-on-live-pages',
+            'insert-position'
+          ])
+          
+          console.log('Admin Message Plugin: API settings request', settings)
+          res.json(settings)
+        } catch (error) {
+          console.error('Admin Message Plugin: API error', error)
+          res.status(500).json({ error: 'Failed to get settings' })
+        }
+      }
+    })
+  }
+
+  console.log('Admin Message Plugin: Server-side registration completed successfully')
 }
 
 async function unregister() {
-  console.log('PeerTube Admin Message Plugin unregistered')
+  console.log('Admin Message Plugin: Server-side unregistration completed')
 }
 
 module.exports = {

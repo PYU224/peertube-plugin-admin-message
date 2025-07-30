@@ -51,9 +51,13 @@ PeerTube v7以降で動画・配信ページの説明欄下にインスタンス
 
 ## 使用例
 
-### シンプルなテキストメッセージ
+### シンプルなテキストメッセージ（URL自動リンク化）
 ```
 ようこそ我々のPeerTubeインスタンスへ！
+
+詳細はこちら: https://example.com/about
+サポート: support@example.com
+公式サイト: www.example.com
 ```
 
 ### Markdownを使用したお知らせ
@@ -86,6 +90,17 @@ PeerTube v7以降で動画・配信ページの説明欄下にインスタンス
 💡 **ヒント**: このビデオが気に入ったら、チャンネル登録をお忘れなく！
 
 [サポート方法について詳しく見る](https://example.com/support)
+```
+
+### 自動リンク化の例
+```
+📢 最新情報をチェック！
+
+公式サイト: https://peertube.example.com
+ヘルプページ: www.example.com/help
+お問い合わせ: admin@example.com
+
+上記のURLやメールアドレスは自動的にリンクになります。
 ```
 
 ## スタイル別の使い分け例
@@ -121,6 +136,9 @@ AGPL-3.0 license
 問題や要望は [GitHub Issues](https://github.com/PYU224/peertube-plugin-admin-message/issues) まで。
 
 ## 変更履歴
+
+### v1.0.18
+- https://example.com や www.example.com 、 admin@example.com といったリンクを有効化
 
 ### v1.0.16
 - 🎨 透明スタイル（無色透明）を追加

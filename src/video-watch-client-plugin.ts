@@ -189,11 +189,60 @@ function register(options: RegisterClientOptions) {
   // 基本的なHTMLサニタイゼーション関数
   function sanitizeBasicHtml(html: string): string {
     let sanitized = html
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\n/g, '<br>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **bold**
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')              // *italic*
+      .replace(/\n/g, '<br>')                            // 改行をbrタグに
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>') // [text](url)
     
+    // 自動リンク化: より安全なアプローチで実装
+    // 既存のHTMLタグとMarkdownリンクを一時的に保護
+    const protectedSections: { placeholder: string; content: string }[] = []
+    let placeholderIndex = 0
+    
+    // 既存のHTMLタグを保護
+    sanitized = sanitized.replace(/<[^>]+>/g, (match) => {
+      const placeholder = `__PROTECTED_TAG_${placeholderIndex}__`
+      protectedSections.push({ placeholder, content: match })
+      placeholderIndex++
+      return placeholder
+    })
+    
+    // HTTP/HTTPS URLの自動リンク化
+    sanitized = sanitized.replace(
+      /(https?:\/\/[^\s<>"']+)/gi,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>'
+    )
+    
+    // www.で始まるURLの自動リンク化
+    sanitized = sanitized.replace(
+      /\b(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s<>"']*)?)/gi,
+      '<a href="http://$1" target="_blank" rel="noopener">$1</a>'
+    )
+    
+    // メールアドレスの自動リンク化
+    sanitized = sanitized.replace(
+      /\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/gi,
+      '<a href="mailto:$1">$1</a>'
+    )
+    
+    // 保護されたセクションを復元
+    protectedSections.forEach(({ placeholder, content }) => {
+      sanitized = sanitized.replace(placeholder, content)
+    })
+    
+    // 重複したリンクタグを修正（ネストしたaタグを解決）
+    sanitized = sanitized.replace(
+      /<a[^>]*><a[^>]*>(.*?)<\/a><\/a>/gi,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>'
+    )
+    
+    // href内にaタグが含まれている場合の修正
+    sanitized = sanitized.replace(
+      /<a href="<a[^>]*>(.*?)<\/a>"[^>]*>/gi,
+      '<a href="$1"'
+    )
+    
+    // 危険なイベントハンドラーや javascript: スキームを除去
     sanitized = sanitized
       .replace(/on\w+\s*=\s*["|'][^"']*["|']/gi, '')
       .replace(/javascript:/gi, '')

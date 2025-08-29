@@ -137,7 +137,9 @@ function register(options: RegisterClientOptions) {
       }
       
       messageContainer.className = className
-      messageContainer.innerHTML = sanitizeBasicHtml(messageContent)
+      
+      // Markdownを完全にパースしてHTMLに変換
+      messageContainer.innerHTML = parseMarkdownToHtml(messageContent)
 
       console.log('Admin Message Plugin: Created message container')
 
@@ -186,70 +188,240 @@ function register(options: RegisterClientOptions) {
     })
   }
 
-  // 基本的なHTMLサニタイゼーション関数
-  function sanitizeBasicHtml(html: string): string {
-    let sanitized = html
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **bold**
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')              // *italic*
-      .replace(/\n/g, '<br>')                            // 改行をbrタグに
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>') // [text](url)
+  // 完全なMarkdownパーサー関数
+  function parseMarkdownToHtml(markdown: string): string {
+    if (!markdown) return ''
     
-    // 自動リンク化: より安全なアプローチで実装
-    // 既存のHTMLタグとMarkdownリンクを一時的に保護
-    const protectedSections: { placeholder: string; content: string }[] = []
-    let placeholderIndex = 0
+    // HTMLタグを一時的にエスケープ（後で必要なものだけ復元）
+    let html = markdown
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
     
-    // 既存のHTMLタグを保護
-    sanitized = sanitized.replace(/<[^>]+>/g, (match) => {
-      const placeholder = `__PROTECTED_TAG_${placeholderIndex}__`
-      protectedSections.push({ placeholder, content: match })
-      placeholderIndex++
-      return placeholder
+    // コードブロックを保護
+    const codeBlocks: string[] = []
+    html = html.replace(/```[\s\S]*?```/g, (match) => {
+      codeBlocks.push(match)
+      return `__CODE_BLOCK_${codeBlocks.length - 1}__`
     })
     
-    // HTTP/HTTPS URLの自動リンク化
-    sanitized = sanitized.replace(
-      /(https?:\/\/[^\s<>"']+)/gi,
-      '<a href="$1" target="_blank" rel="noopener">$1</a>'
-    )
-    
-    // www.で始まるURLの自動リンク化
-    sanitized = sanitized.replace(
-      /\b(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s<>"']*)?)/gi,
-      '<a href="http://$1" target="_blank" rel="noopener">$1</a>'
-    )
-    
-    // メールアドレスの自動リンク化
-    sanitized = sanitized.replace(
-      /\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/gi,
-      '<a href="mailto:$1">$1</a>'
-    )
-    
-    // 保護されたセクションを復元
-    protectedSections.forEach(({ placeholder, content }) => {
-      sanitized = sanitized.replace(placeholder, content)
+    // インラインコードを保護
+    const inlineCodes: string[] = []
+    html = html.replace(/`[^`]+`/g, (match) => {
+      inlineCodes.push(match)
+      return `__INLINE_CODE_${inlineCodes.length - 1}__`
     })
     
-    // 重複したリンクタグを修正（ネストしたaタグを解決）
-    sanitized = sanitized.replace(
-      /<a[^>]*><a[^>]*>(.*?)<\/a><\/a>/gi,
-      '<a href="$1" target="_blank" rel="noopener">$1</a>'
-    )
+    // 見出し (h1-h6)
+    html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
+    html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
+    html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
+    html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+    html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+    html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
     
-    // href内にaタグが含まれている場合の修正
-    sanitized = sanitized.replace(
-      /<a href="<a[^>]*>(.*?)<\/a>"[^>]*>/gi,
-      '<a href="$1"'
-    )
+    // 水平線
+    html = html.replace(/^---+$/gm, '<hr>')
+    html = html.replace(/^\*\*\*+$/gm, '<hr>')
     
-    // 危険なイベントハンドラーや javascript: スキームを除去
-    sanitized = sanitized
-      .replace(/on\w+\s*=\s*["|'][^"']*["|']/gi, '')
-      .replace(/javascript:/gi, '')
+    // リスト処理
+    // 番号付きリスト
+    html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<li>$2</li>')
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+      return '<ol>' + match + '</ol>'
+    })
+    
+    // 箇条書きリスト（ネストも考慮）
+    const processUnorderedLists = (text: string): string => {
+      const lines = text.split('\n')
+      const result: string[] = []
+      let inList = false
+      let listDepth = 0
+      
+      for (const line of lines) {
+        const match = line.match(/^(\s*)[-*+]\s+(.+)$/)
+        if (match) {
+          const indent = match[1].length
+          const content = match[2]
+          const depth = Math.floor(indent / 2)
+          
+          if (!inList) {
+            result.push('<ul>')
+            inList = true
+            listDepth = depth
+          }
+          
+          while (listDepth < depth) {
+            result.push('<ul>')
+            listDepth++
+          }
+          while (listDepth > depth) {
+            result.push('</ul>')
+            listDepth--
+          }
+          
+          result.push(`<li>${content}</li>`)
+        } else {
+          if (inList) {
+            while (listDepth >= 0) {
+              result.push('</ul>')
+              listDepth--
+            }
+            inList = false
+            listDepth = 0
+          }
+          result.push(line)
+        }
+      }
+      
+      if (inList) {
+        while (listDepth >= 0) {
+          result.push('</ul>')
+          listDepth--
+        }
+      }
+      
+      return result.join('\n')
+    }
+    
+    html = processUnorderedLists(html)
+    
+    // 引用
+    html = html.replace(/^&gt;\s+(.+)$/gm, '<blockquote>$1</blockquote>')
+    html = html.replace(/(<blockquote>.*<\/blockquote>\n?)+/g, (match) => {
+      const content = match.replace(/<\/?blockquote>/g, '')
+      return '<blockquote>' + content + '</blockquote>'
+    })
+    
+    // テーブル（基本的なサポート）
+    const processTable = (text: string): string => {
+      const lines = text.split('\n')
+      let result = text
+      let inTable = false
+      let tableContent: string[] = []
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        if (line.includes('|')) {
+          if (!inTable) {
+            inTable = true
+            tableContent = []
+          }
+          tableContent.push(line)
+        } else if (inTable) {
+          // テーブル終了、変換実行
+          if (tableContent.length >= 2) {
+            const headerLine = tableContent[0]
+            const separatorLine = tableContent[1]
+            
+            if (separatorLine.match(/^\|?[\s-:|]+\|?$/)) {
+              let tableHtml = '<table><thead><tr>'
+              const headers = headerLine.split('|').filter(h => h.trim())
+              headers.forEach(h => {
+                tableHtml += `<th>${h.trim()}</th>`
+              })
+              tableHtml += '</tr></thead><tbody>'
+              
+              for (let j = 2; j < tableContent.length; j++) {
+                const cells = tableContent[j].split('|').filter(c => c.trim())
+                if (cells.length > 0) {
+                  tableHtml += '<tr>'
+                  cells.forEach(c => {
+                    tableHtml += `<td>${c.trim()}</td>`
+                  })
+                  tableHtml += '</tr>'
+                }
+              }
+              tableHtml += '</tbody></table>'
+              
+              const tableText = tableContent.join('\n')
+              result = result.replace(tableText, tableHtml)
+            }
+          }
+          inTable = false
+          tableContent = []
+        }
+      }
+      
+      return result
+    }
+    
+    html = processTable(html)
+    
+    // 強調表現
+    // 太字（**text** または __text__）
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    
+    // イタリック（*text* または _text_）
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>')
+    
+    // 取り消し線（~~text~~）
+    html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+    
+    // リンク処理
+    // [text](url) 形式
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    
+    // 画像
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;">')
+    
+    // 自動リンク化
+    // URL
+    html = html.replace(/(^|[^"])(https?:\/\/[^\s<>"']+)/gi, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    html = html.replace(/\b(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s<>"']*)?)/gi, '<a href="http://$1" target="_blank" rel="noopener">$1</a>')
+    
+    // メールアドレス
+    html = html.replace(/\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/gi, '<a href="mailto:$1">$1</a>')
+    
+    // コードブロックを復元
+    codeBlocks.forEach((code, index) => {
+      const codeContent = code.replace(/```(\w*)\n?/, '').replace(/```$/, '')
+      const language = code.match(/```(\w+)/)?.[1] || ''
+      const escapedCode = codeContent
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+      html = html.replace(
+        `__CODE_BLOCK_${index}__`,
+        `<pre><code class="language-${language}">${escapedCode}</code></pre>`
+      )
+    })
+    
+    // インラインコードを復元
+    inlineCodes.forEach((code, index) => {
+      const codeContent = code.slice(1, -1)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+      html = html.replace(
+        `__INLINE_CODE_${index}__`,
+        `<code>${codeContent}</code>`
+      )
+    })
+    
+    // 改行処理
+    // 段落の処理
+    html = html.split('\n\n').map(paragraph => {
+      // 既にHTMLタグで囲まれている場合はそのまま
+      if (paragraph.match(/^<[^>]+>/)) {
+        return paragraph
+      }
+      // 空行でない場合は<p>タグで囲む
+      if (paragraph.trim()) {
+        return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`
+      }
+      return paragraph
+    }).join('\n')
+    
+    // セキュリティ: 危険なタグやイベントハンドラを除去
+    html = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/javascript:/gi, '')
     
-    return sanitized
+    return html
   }
 
   async function insertMessageAtPosition(messageElement: HTMLElement, position: string): Promise<boolean> {

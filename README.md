@@ -143,6 +143,9 @@ AGPL-3.0 license
 
 ## 変更履歴
 
+### v1.0.21
+- マークダウンに完全対応
+
 ### v1.0.18
 - https://example.com や www.example.com 、 admin@example.com といったリンクを有効化
 

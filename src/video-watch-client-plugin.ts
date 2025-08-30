@@ -206,18 +206,18 @@ function register(options: RegisterClientOptions) {
     
     // インラインコードを保護
     const inlineCodes: string[] = []
-    html = html.replace(/`[^`]+`/g, (match) => {
+    html = html.replace(/`[^`\n]+`/g, (match) => {
       inlineCodes.push(match)
       return `__INLINE_CODE_${inlineCodes.length - 1}__`
     })
     
-    // 見出し (h1-h6)
-    html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-    html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
-    html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
-    html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-    html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-    html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+    // 見出し (h1-h6) - 改行を考慮
+    html = html.replace(/^######\s+(.+?)$/gm, '<h6>$1</h6>')
+    html = html.replace(/^#####\s+(.+?)$/gm, '<h5>$1</h5>')
+    html = html.replace(/^####\s+(.+?)$/gm, '<h4>$1</h4>')
+    html = html.replace(/^###\s+(.+?)$/gm, '<h3>$1</h3>')
+    html = html.replace(/^##\s+(.+?)$/gm, '<h2>$1</h2>')
+    html = html.replace(/^#\s+(.+?)$/gm, '<h1>$1</h1>')
     
     // 水平線
     html = html.replace(/^---+$/gm, '<hr>')
@@ -400,19 +400,32 @@ function register(options: RegisterClientOptions) {
       )
     })
     
-    // 改行処理
-    // 段落の処理
-    html = html.split('\n\n').map(paragraph => {
-      // 既にHTMLタグで囲まれている場合はそのまま
-      if (paragraph.match(/^<[^>]+>/)) {
-        return paragraph
+    // 改行処理と段落処理
+    // まず、連続する改行を段落の区切りとして扱う
+    const paragraphs = html.split(/\n\n+/)
+    
+    html = paragraphs.map(paragraph => {
+      // 空の段落はスキップ
+      if (!paragraph.trim()) return ''
+      
+      // 既にブロック要素（見出し、リスト、引用、テーブル、コードブロック等）で始まっている場合
+      if (paragraph.match(/^<(?:h[1-6]|ul|ol|li|blockquote|table|pre|hr)/i)) {
+        // ブロック要素内の改行は<br>に変換
+        return paragraph.replace(/\n/g, '<br>')
       }
-      // 空行でない場合は<p>タグで囲む
-      if (paragraph.trim()) {
-        return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`
+      
+      // 通常のテキスト段落の場合
+      // 単一改行は<br>に、段落全体を<p>で囲む
+      const processedParagraph = paragraph.replace(/\n/g, '<br>')
+      
+      // すでに何らかのHTMLタグで囲まれている場合はそのまま
+      if (processedParagraph.match(/^<[^>]+>.*<\/[^>]+>$/)) {
+        return processedParagraph
       }
-      return paragraph
-    }).join('\n')
+      
+      // それ以外は<p>タグで囲む
+      return `<p>${processedParagraph}</p>`
+    }).filter(p => p !== '').join('\n\n')
     
     // セキュリティ: 危険なタグやイベントハンドラを除去
     html = html

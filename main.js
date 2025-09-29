@@ -8,7 +8,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
     label: 'メッセージ表示を有効化',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: '管理者メッセージの表示を有効または無効にします'
+    descriptionHTML: '管理者メッセージの表示を有効または無効にします',
+    private: false
   })
 
   registerSetting({
@@ -33,7 +34,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
       { label: 'その他（透明・無色）', value: 'transparent' }
     ],
     default: 'info',
-    descriptionHTML: '管理者メッセージの外観スタイル'
+    descriptionHTML: '管理者メッセージの外観スタイル',
+    private: false
   })
 
   registerSetting({
@@ -41,7 +43,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
     label: '動画ページに表示',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: '通常の動画ページにメッセージを表示します'
+    descriptionHTML: '通常の動画ページにメッセージを表示します',
+    private: false
   })
 
   registerSetting({
@@ -49,7 +52,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
     label: 'ライブページに表示',
     type: 'input-checkbox',
     default: true,
-    descriptionHTML: 'ライブ配信ページにメッセージを表示します'
+    descriptionHTML: 'ライブ配信ページにメッセージを表示します',
+    private: false
   })
 
   registerSetting({
@@ -62,7 +66,8 @@ async function register({ registerSetting, settingsManager, storageManager, vide
       { label: 'コメント欄のすぐ下', value: 'after-comments' }
     ],
     default: 'after-description',
-    descriptionHTML: 'ページ内でのメッセージ表示位置を選択してください'
+    descriptionHTML: 'ページ内でのメッセージ表示位置を選択してください',
+    private: false
   })
 
   registerSetting({
@@ -75,36 +80,9 @@ async function register({ registerSetting, settingsManager, storageManager, vide
       { label: '特大（20px）', value: 'extra-large' }
     ],
     default: 'normal',
-    descriptionHTML: 'メッセージの文字サイズを選択してください'
+    descriptionHTML: 'メッセージの文字サイズを選択してください',
+    private: false
   })
-
-  // PeerTube 7.2.1 用のAPIエンドポイント登録
-  // クライアントサイドから設定を取得できるようにする
-  if (peertubeHelpers.registerApi) {
-    peertubeHelpers.registerApi({
-      method: 'GET',
-      path: '/settings',
-      handler: async (req, res) => {
-        try {
-          const settings = await settingsManager.getSettings([
-            'enable-admin-message',
-            'admin-message-content', 
-            'message-style',
-            'show-on-video-pages',
-            'show-on-live-pages',
-            'insert-position',
-            'font-size'
-          ])
-          
-          console.log('Admin Message Plugin: API settings request', settings)
-          res.json(settings)
-        } catch (error) {
-          console.error('Admin Message Plugin: API error', error)
-          res.status(500).json({ error: 'Failed to get settings' })
-        }
-      }
-    })
-  }
 
   console.log('Admin Message Plugin: Server-side registration completed successfully')
 }

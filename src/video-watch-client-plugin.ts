@@ -10,7 +10,6 @@ function register(options: RegisterClientOptions) {
     target: 'action:video-watch.init',
     handler: () => {
       console.log('Admin Message Plugin: Video watch page initialized')
-      // DOM の準備を待つためにより長い遅延
       setTimeout(() => displayAdminMessage(), 1500)
     }
   })
@@ -50,7 +49,6 @@ function register(options: RegisterClientOptions) {
       let settings: any = {}
       
       try {
-        // PeerTube 7.2.1 では getSettings() の挙動が安定している
         settings = await peertubeHelpers.getSettings()
         console.log('Admin Message Plugin: Raw settings object:', settings)
         console.log('Admin Message Plugin: Settings keys:', Object.keys(settings))
@@ -59,33 +57,18 @@ function register(options: RegisterClientOptions) {
         return
       }
 
-      // PeerTube 7.2.1 では設定キーにプラグイン名のプレフィックスが付く場合がある
-      const getSettingValue = (key: string) => {
-        return settings[key] ?? 
-               settings[`admin-message-${key}`] ?? 
-               settings[`peertube-plugin-admin-message-${key}`] ??
-               null
-      }
-
-      const isEnabled = getSettingValue('enable-admin-message')
-      console.log('Admin Message Plugin: Enable setting value:', isEnabled, typeof isEnabled)
-      
-      // boolean チェックを厳密に
-      if (isEnabled === false || isEnabled === 'false') {
-        console.log('Admin Message Plugin: Disabled in settings')
-        return
-      }
-
-      const messageContent = getSettingValue('admin-message-content') as string
-      const messageStyle = getSettingValue('message-style') as string || 'info'
-      const fontSize = getSettingValue('font-size') as string || 'normal'
-      const showOnVideo = getSettingValue('show-on-video-pages') ?? true
-      const showOnLive = getSettingValue('show-on-live-pages') ?? true
-      const insertPosition = getSettingValue('insert-position') as string || 'after-description'
+      // 設定値を取得（直接アクセス）
+      const isEnabled = settings['enable-admin-message']
+      const messageContent = settings['admin-message-content']
+      const messageStyle = settings['message-style'] || 'info'
+      const fontSize = settings['font-size'] || 'normal'
+      const showOnVideo = settings['show-on-video-pages']
+      const showOnLive = settings['show-on-live-pages']
+      const insertPosition = settings['insert-position'] || 'before-description'
 
       console.log('Admin Message Plugin: Processed settings:', {
         isEnabled,
-        messageContent: messageContent?.substring(0, 50) + '...',
+        messageContent: messageContent ? (messageContent.substring(0, 50) + '...') : 'empty',
         messageStyle,
         fontSize,
         showOnVideo,
@@ -93,6 +76,13 @@ function register(options: RegisterClientOptions) {
         insertPosition
       })
 
+      // メッセージが無効の場合
+      if (isEnabled === false || isEnabled === 'false' || isEnabled === 0) {
+        console.log('Admin Message Plugin: Disabled in settings')
+        return
+      }
+
+      // メッセージ内容が空の場合
       if (!messageContent || messageContent.trim() === '') {
         console.log('Admin Message Plugin: No message content found')
         return
@@ -102,52 +92,62 @@ function register(options: RegisterClientOptions) {
       const isLivePage = window.location.pathname.includes('/live/')
       const isVideoPage = window.location.pathname.includes('/watch/') || window.location.pathname.includes('/w/')
 
-      console.log('Admin Message Plugin: Page type check', { 
-        isLivePage, 
-        isVideoPage, 
-        pathname: window.location.pathname,
-        showOnVideo,
-        showOnLive
-      })
-
-      if (isLivePage && showOnLive === false) {
+      // ページタイプごとの表示設定をチェック
+      if (isLivePage && (showOnLive === false || showOnLive === 'false' || showOnLive === 0)) {
         console.log('Admin Message Plugin: Live page but live display disabled')
         return
       }
-      if (isVideoPage && showOnVideo === false) {
+      if (isVideoPage && (showOnVideo === false || showOnVideo === 'false' || showOnVideo === 0)) {
         console.log('Admin Message Plugin: Video page but video display disabled')
         return
       }
 
-      // PeerTube 7.2.1 の DOM 構造を確認
+      // DOM の準備を待つ
       await waitForDOMReady()
 
       // メッセージコンテナを作成
       const messageContainer = document.createElement('div')
       messageContainer.id = 'admin-message-container'
       
-      // スタイルクラスを設定
+      // クラスを設定
       let className = `admin-message admin-message-${messageStyle}`
-      
-      // 文字サイズクラスを追加
       if (fontSize === 'large') {
         className += ' admin-message-large'
       } else if (fontSize === 'extra-large') {
         className += ' admin-message-extra-large'
       }
-      
       messageContainer.className = className
       
-      // Markdownを完全にパースしてHTMLに変換
+      // インラインスタイルを強制適用（重要！）
+      const inlineStyles = getInlineStyles(messageStyle, fontSize)
+      messageContainer.setAttribute('style', inlineStyles)
+      console.log('Admin Message Plugin: Applied inline styles:', inlineStyles)
+      
+      // HTMLコンテンツを設定
       messageContainer.innerHTML = parseMarkdownToHtml(messageContent)
 
-      console.log('Admin Message Plugin: Created message container')
+      console.log('Admin Message Plugin: Created message container with inline styles')
 
       // メッセージを挿入
       const inserted = await insertMessageAtPosition(messageContainer, insertPosition)
       
       if (inserted) {
         console.log('Admin Message Plugin: Message successfully inserted')
+        
+        // 挿入後の確認（1秒後）
+        setTimeout(() => {
+          const insertedElement = document.getElementById('admin-message-container')
+          if (insertedElement) {
+            const rect = insertedElement.getBoundingClientRect()
+            console.log('Admin Message Plugin: Message verification after 1 second:', {
+              exists: true,
+              visible: rect.width > 0 && rect.height > 0,
+              position: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+            })
+          } else {
+            console.error('Admin Message Plugin: Message disappeared after insertion!')
+          }
+        }, 1000)
       } else {
         console.error('Admin Message Plugin: Failed to insert message')
       }
@@ -155,6 +155,90 @@ function register(options: RegisterClientOptions) {
     } catch (error) {
       console.error('Admin Message Plugin: Error in displayAdminMessage', error)
     }
+  }
+
+  // インラインスタイルを生成する関数
+  function getInlineStyles(messageStyle: string, fontSize: string): string {
+    // 基本スタイル（すべてに!importantを付ける）
+    const baseStyles = {
+      'display': 'block !important',
+      'visibility': 'visible !important',
+      'opacity': '1 !important',
+      'margin': '15px 0 !important',
+      'padding': '15px !important',
+      'border-radius': '8px !important',
+      'border-left': '4px solid !important',
+      'position': 'relative !important',
+      'line-height': '1.6 !important',
+      'z-index': '1000 !important',
+      'width': 'auto !important',
+      'height': 'auto !important',
+      'box-sizing': 'border-box !important'
+    }
+
+    // フォントサイズ設定
+    const fontSizeMap: { [key: string]: string } = {
+      'normal': '16px !important',
+      'large': '18px !important',
+      'extra-large': '20px !important'
+    }
+    const selectedFontSize = fontSizeMap[fontSize] || '16px !important'
+
+    // スタイル別の色設定
+    const styleConfigs: { [key: string]: { bg: string, border: string, color: string } } = {
+      'info': {
+        bg: '#e3f2fd !important',
+        border: '#2196f3 !important',
+        color: '#0d47a1 !important'
+      },
+      'warning': {
+        bg: '#fff3e0 !important',
+        border: '#ff9800 !important',
+        color: '#e65100 !important'
+      },
+      'success': {
+        bg: '#e8f5e8 !important',
+        border: '#4caf50 !important',
+        color: '#2e7d32 !important'
+      },
+      'error': {
+        bg: '#ffebee !important',
+        border: '#f44336 !important',
+        color: '#c62828 !important'
+      },
+      'transparent': {
+        bg: 'transparent !important',
+        border: 'transparent !important',
+        color: 'inherit !important'
+      },
+      'default': {
+        bg: '#f5f5f5 !important',
+        border: '#757575 !important',
+        color: '#424242 !important'
+      }
+    }
+
+    const config = styleConfigs[messageStyle] || styleConfigs['default']
+
+    // スタイルオブジェクトを作成
+    const styles: { [key: string]: string } = {
+      ...baseStyles,
+      'font-size': selectedFontSize,
+      'background-color': config.bg,
+      'border-left-color': config.border,
+      'color': config.color
+    }
+
+    // transparent スタイルの場合の特別処理
+    if (messageStyle === 'transparent') {
+      styles['border-left'] = 'none !important'
+      styles['padding-left'] = '0 !important'
+    }
+
+    // CSSテキストとして結合
+    return Object.entries(styles)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('; ')
   }
 
   // DOM の準備を待つ関数
@@ -166,7 +250,6 @@ function register(options: RegisterClientOptions) {
       const checkDOM = () => {
         attempts++
         
-        // PeerTube 7.2.1 の主要な要素をチェック
         const videoInfo = document.querySelector('my-video-watch-video-info')
         const videoDetails = document.querySelector('.video-info')
         const description = document.querySelector('.video-info-description')
@@ -188,251 +271,27 @@ function register(options: RegisterClientOptions) {
     })
   }
 
-  // 完全なMarkdownパーサー関数
+  // Markdownパーサー関数（簡略版）
   function parseMarkdownToHtml(markdown: string): string {
     if (!markdown) return ''
     
-    // HTMLタグを一時的にエスケープ（後で必要なものだけ復元）
     let html = markdown
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
     
-    // コードブロックを保護
-    const codeBlocks: string[] = []
-    html = html.replace(/```[\s\S]*?```/g, (match) => {
-      codeBlocks.push(match)
-      return `__CODE_BLOCK_${codeBlocks.length - 1}__`
-    })
+    // 見出し
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
     
-    // インラインコードを保護
-    const inlineCodes: string[] = []
-    html = html.replace(/`[^`\n]+`/g, (match) => {
-      inlineCodes.push(match)
-      return `__INLINE_CODE_${inlineCodes.length - 1}__`
-    })
-    
-    // 見出し (h1-h6) - 改行を考慮
-    html = html.replace(/^######\s+(.+?)$/gm, '<h6>$1</h6>')
-    html = html.replace(/^#####\s+(.+?)$/gm, '<h5>$1</h5>')
-    html = html.replace(/^####\s+(.+?)$/gm, '<h4>$1</h4>')
-    html = html.replace(/^###\s+(.+?)$/gm, '<h3>$1</h3>')
-    html = html.replace(/^##\s+(.+?)$/gm, '<h2>$1</h2>')
-    html = html.replace(/^#\s+(.+?)$/gm, '<h1>$1</h1>')
-    
-    // 水平線
-    html = html.replace(/^---+$/gm, '<hr>')
-    html = html.replace(/^\*\*\*+$/gm, '<hr>')
-    
-    // リスト処理
-    // 番号付きリスト
-    html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<li>$2</li>')
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
-      return '<ol>' + match + '</ol>'
-    })
-    
-    // 箇条書きリスト（ネストも考慮）
-    const processUnorderedLists = (text: string): string => {
-      const lines = text.split('\n')
-      const result: string[] = []
-      let inList = false
-      let listDepth = 0
-      
-      for (const line of lines) {
-        const match = line.match(/^(\s*)[-*+]\s+(.+)$/)
-        if (match) {
-          const indent = match[1].length
-          const content = match[2]
-          const depth = Math.floor(indent / 2)
-          
-          if (!inList) {
-            result.push('<ul>')
-            inList = true
-            listDepth = depth
-          }
-          
-          while (listDepth < depth) {
-            result.push('<ul>')
-            listDepth++
-          }
-          while (listDepth > depth) {
-            result.push('</ul>')
-            listDepth--
-          }
-          
-          result.push(`<li>${content}</li>`)
-        } else {
-          if (inList) {
-            while (listDepth >= 0) {
-              result.push('</ul>')
-              listDepth--
-            }
-            inList = false
-            listDepth = 0
-          }
-          result.push(line)
-        }
-      }
-      
-      if (inList) {
-        while (listDepth >= 0) {
-          result.push('</ul>')
-          listDepth--
-        }
-      }
-      
-      return result.join('\n')
-    }
-    
-    html = processUnorderedLists(html)
-    
-    // 引用
-    html = html.replace(/^&gt;\s+(.+)$/gm, '<blockquote>$1</blockquote>')
-    html = html.replace(/(<blockquote>.*<\/blockquote>\n?)+/g, (match) => {
-      const content = match.replace(/<\/?blockquote>/g, '')
-      return '<blockquote>' + content + '</blockquote>'
-    })
-    
-    // テーブル（基本的なサポート）
-    const processTable = (text: string): string => {
-      const lines = text.split('\n')
-      let result = text
-      let inTable = false
-      let tableContent: string[] = []
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-        if (line.includes('|')) {
-          if (!inTable) {
-            inTable = true
-            tableContent = []
-          }
-          tableContent.push(line)
-        } else if (inTable) {
-          // テーブル終了、変換実行
-          if (tableContent.length >= 2) {
-            const headerLine = tableContent[0]
-            const separatorLine = tableContent[1]
-            
-            if (separatorLine.match(/^\|?[\s-:|]+\|?$/)) {
-              let tableHtml = '<table><thead><tr>'
-              const headers = headerLine.split('|').filter(h => h.trim())
-              headers.forEach(h => {
-                tableHtml += `<th>${h.trim()}</th>`
-              })
-              tableHtml += '</tr></thead><tbody>'
-              
-              for (let j = 2; j < tableContent.length; j++) {
-                const cells = tableContent[j].split('|').filter(c => c.trim())
-                if (cells.length > 0) {
-                  tableHtml += '<tr>'
-                  cells.forEach(c => {
-                    tableHtml += `<td>${c.trim()}</td>`
-                  })
-                  tableHtml += '</tr>'
-                }
-              }
-              tableHtml += '</tbody></table>'
-              
-              const tableText = tableContent.join('\n')
-              result = result.replace(tableText, tableHtml)
-            }
-          }
-          inTable = false
-          tableContent = []
-        }
-      }
-      
-      return result
-    }
-    
-    html = processTable(html)
-    
-    // 強調表現
-    // 太字（**text** または __text__）
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
-    
-    // イタリック（*text* または _text_）
-    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    html = html.replace(/_([^_]+)_/g, '<em>$1</em>')
-    
-    // 取り消し線（~~text~~）
-    html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
-    
-    // リンク処理
-    // [text](url) 形式
+    // リンク
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     
-    // 画像
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;">')
-    
-    // 自動リンク化
-    // URL
+    // URL自動リンク
     html = html.replace(/(^|[^"])(https?:\/\/[^\s<>"']+)/gi, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
-    html = html.replace(/\b(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s<>"']*)?)/gi, '<a href="http://$1" target="_blank" rel="noopener">$1</a>')
     
-    // メールアドレス
-    html = html.replace(/\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/gi, '<a href="mailto:$1">$1</a>')
-    
-    // コードブロックを復元
-    codeBlocks.forEach((code, index) => {
-      const codeContent = code.replace(/```(\w*)\n?/, '').replace(/```$/, '')
-      const language = code.match(/```(\w+)/)?.[1] || ''
-      const escapedCode = codeContent
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-      html = html.replace(
-        `__CODE_BLOCK_${index}__`,
-        `<pre><code class="language-${language}">${escapedCode}</code></pre>`
-      )
-    })
-    
-    // インラインコードを復元
-    inlineCodes.forEach((code, index) => {
-      const codeContent = code.slice(1, -1)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-      html = html.replace(
-        `__INLINE_CODE_${index}__`,
-        `<code>${codeContent}</code>`
-      )
-    })
-    
-    // 改行処理と段落処理
-    // まず、連続する改行を段落の区切りとして扱う
-    const paragraphs = html.split(/\n\n+/)
-    
-    html = paragraphs.map(paragraph => {
-      // 空の段落はスキップ
-      if (!paragraph.trim()) return ''
-      
-      // 既にブロック要素（見出し、リスト、引用、テーブル、コードブロック等）で始まっている場合
-      if (paragraph.match(/^<(?:h[1-6]|ul|ol|li|blockquote|table|pre|hr)/i)) {
-        // ブロック要素内の改行は<br>に変換
-        return paragraph.replace(/\n/g, '<br>')
-      }
-      
-      // 通常のテキスト段落の場合
-      // 単一改行は<br>に、段落全体を<p>で囲む
-      const processedParagraph = paragraph.replace(/\n/g, '<br>')
-      
-      // すでに何らかのHTMLタグで囲まれている場合はそのまま
-      if (processedParagraph.match(/^<[^>]+>.*<\/[^>]+>$/)) {
-        return processedParagraph
-      }
-      
-      // それ以外は<p>タグで囲む
-      return `<p>${processedParagraph}</p>`
-    }).filter(p => p !== '').join('\n\n')
-    
-    // セキュリティ: 危険なタグやイベントハンドラを除去
-    html = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-      .replace(/javascript:/gi, '')
+    // 改行を<br>に
+    html = html.replace(/\n/g, '<br>')
     
     return html
   }
@@ -440,7 +299,6 @@ function register(options: RegisterClientOptions) {
   async function insertMessageAtPosition(messageElement: HTMLElement, position: string): Promise<boolean> {
     console.log('Admin Message Plugin: Attempting to insert at position:', position)
     
-    // PeerTube 7.2.1 の DOM 構造をログ出力
     logDOMStructure()
     
     switch (position) {
@@ -451,14 +309,13 @@ function register(options: RegisterClientOptions) {
       case 'after-comments':
         return insertAfterComments(messageElement)
       default:
-        return insertAfterDescription(messageElement)
+        return insertBeforeDescription(messageElement)
     }
   }
 
   function logDOMStructure() {
     console.log('Admin Message Plugin: Current DOM structure:')
     
-    // PeerTube 7.2.1 の主要な要素を確認
     const selectors = [
       'my-video-watch-video-info',
       '.video-info',
@@ -481,7 +338,6 @@ function register(options: RegisterClientOptions) {
   }
 
   function insertBeforeDescription(messageElement: HTMLElement): boolean {
-    // PeerTube 7.2.1 用のセレクタ
     const selectors = [
       '.video-info-name',
       '.video-info-first-row',
@@ -497,7 +353,6 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    // フォールバック
     const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
     if (videoInfo) {
       videoInfo.appendChild(messageElement)
@@ -509,7 +364,6 @@ function register(options: RegisterClientOptions) {
   }
 
   function insertAfterDescription(messageElement: HTMLElement): boolean {
-    // PeerTube 7.2.1 用のセレクタ
     const selectors = [
       '.video-info-description',
       'my-video-description',
@@ -525,7 +379,6 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    // フォールバック: video-info コンテナの最後に追加
     const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
     if (videoInfo) {
       videoInfo.appendChild(messageElement)
@@ -533,10 +386,8 @@ function register(options: RegisterClientOptions) {
       return true
     }
 
-    // 最終フォールバック
     const mainCol = document.querySelector('.main-col, main')
     if (mainCol) {
-      // コメント欄の前に挿入を試みる
       const comments = document.querySelector('my-video-comments, .comments')
       if (comments) {
         mainCol.insertBefore(messageElement, comments)
@@ -568,7 +419,6 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    // フォールバック
     const mainCol = document.querySelector('.main-col, main')
     if (mainCol) {
       mainCol.appendChild(messageElement)

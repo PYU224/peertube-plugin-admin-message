@@ -12,7 +12,7 @@ function register(options: RegisterClientOptions) {
       const link = document.createElement('link')
       link.id = cssId
       link.rel = 'stylesheet'
-      link.href = '/plugins/peertube-plugin-admin-message/client/admin-message-styles.css'
+      link.href = '/plugins/peertube-plugin-admin-message/admin-message-styles.css'
       document.head.appendChild(link)
       console.log('Admin Message Plugin: CSS loaded')
     }

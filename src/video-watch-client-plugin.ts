@@ -5,11 +5,25 @@ function register(options: RegisterClientOptions) {
 
   console.log('Admin Message Plugin: Registering hooks for PeerTube 7.2.1')
 
+  // CSSを強制的に読み込む
+  const loadCSS = () => {
+    const cssId = 'admin-message-styles'
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link')
+      link.id = cssId
+      link.rel = 'stylesheet'
+      link.href = '/plugins/peertube-plugin-admin-message/client/admin-message-styles.css'
+      document.head.appendChild(link)
+      console.log('Admin Message Plugin: CSS loaded')
+    }
+  }
+
   // 動画視聴ページが読み込まれた時のフック
   registerHook({
     target: 'action:video-watch.init',
     handler: () => {
       console.log('Admin Message Plugin: Video watch page initialized')
+      loadCSS()
       setTimeout(() => displayAdminMessage(), 1500)
     }
   })
@@ -29,6 +43,7 @@ function register(options: RegisterClientOptions) {
     handler: () => {
       if (window.location.pathname.includes('/watch/') || window.location.pathname.includes('/w/')) {
         console.log('Admin Message Plugin: Navigation ended on video page')
+        loadCSS()
         setTimeout(() => displayAdminMessage(), 2500)
       }
     }
@@ -64,7 +79,7 @@ function register(options: RegisterClientOptions) {
       const fontSize = settings['font-size'] || 'normal'
       const showOnVideo = settings['show-on-video-pages']
       const showOnLive = settings['show-on-live-pages']
-      const insertPosition = settings['insert-position'] || 'before-description'
+      const insertPosition = settings['insert-position'] || 'after-description'
 
       console.log('Admin Message Plugin: Processed settings:', {
         isEnabled,
@@ -109,7 +124,7 @@ function register(options: RegisterClientOptions) {
       const messageContainer = document.createElement('div')
       messageContainer.id = 'admin-message-container'
       
-      // クラスを設定
+      // クラスを設定（CSSとインラインスタイルの両方を使用）
       let className = `admin-message admin-message-${messageStyle}`
       if (fontSize === 'large') {
         className += ' admin-message-large'
@@ -118,7 +133,7 @@ function register(options: RegisterClientOptions) {
       }
       messageContainer.className = className
       
-      // インラインスタイルを強制適用（重要！）
+      // インラインスタイルを強制適用
       const inlineStyles = getInlineStyles(messageStyle, fontSize)
       messageContainer.setAttribute('style', inlineStyles)
       console.log('Admin Message Plugin: Applied inline styles:', inlineStyles)
@@ -126,7 +141,7 @@ function register(options: RegisterClientOptions) {
       // HTMLコンテンツを設定
       messageContainer.innerHTML = parseMarkdownToHtml(messageContent)
 
-      console.log('Admin Message Plugin: Created message container with inline styles')
+      console.log('Admin Message Plugin: Created message container')
 
       // メッセージを挿入
       const inserted = await insertMessageAtPosition(messageContainer, insertPosition)
@@ -134,11 +149,24 @@ function register(options: RegisterClientOptions) {
       if (inserted) {
         console.log('Admin Message Plugin: Message successfully inserted')
         
+        // 挿入後の即時確認
+        const insertedElement = document.getElementById('admin-message-container')
+        if (insertedElement) {
+          const computedStyle = window.getComputedStyle(insertedElement)
+          console.log('Admin Message Plugin: Computed styles:', {
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            backgroundColor: computedStyle.backgroundColor,
+            color: computedStyle.color
+          })
+        }
+        
         // 挿入後の確認（1秒後）
         setTimeout(() => {
-          const insertedElement = document.getElementById('admin-message-container')
-          if (insertedElement) {
-            const rect = insertedElement.getBoundingClientRect()
+          const verifyElement = document.getElementById('admin-message-container')
+          if (verifyElement) {
+            const rect = verifyElement.getBoundingClientRect()
             console.log('Admin Message Plugin: Message verification after 1 second:', {
               exists: true,
               visible: rect.width > 0 && rect.height > 0,
@@ -157,93 +185,86 @@ function register(options: RegisterClientOptions) {
     }
   }
 
-  // インラインスタイルを生成する関数
+  // インラインスタイルを生成する関数（より強力な!important適用）
   function getInlineStyles(messageStyle: string, fontSize: string): string {
-    // 基本スタイル（すべてに!importantを付ける）
-    const baseStyles = {
-      'display': 'block !important',
-      'visibility': 'visible !important',
-      'opacity': '1 !important',
-      'margin': '15px 0 !important',
-      'padding': '15px !important',
-      'border-radius': '8px !important',
-      'border-left': '4px solid !important',
-      'position': 'relative !important',
-      'line-height': '1.6 !important',
-      'z-index': '1000 !important',
-      'width': 'auto !important',
-      'height': 'auto !important',
-      'box-sizing': 'border-box !important'
-    }
-
     // フォントサイズ設定
     const fontSizeMap: { [key: string]: string } = {
-      'normal': '16px !important',
-      'large': '18px !important',
-      'extra-large': '20px !important'
+      'normal': '16px',
+      'large': '18px',
+      'extra-large': '20px'
     }
-    const selectedFontSize = fontSizeMap[fontSize] || '16px !important'
+    const selectedFontSize = fontSizeMap[fontSize] || '16px'
 
     // スタイル別の色設定
     const styleConfigs: { [key: string]: { bg: string, border: string, color: string } } = {
       'info': {
-        bg: '#e3f2fd !important',
-        border: '#2196f3 !important',
-        color: '#0d47a1 !important'
+        bg: '#e3f2fd',
+        border: '#2196f3',
+        color: '#0d47a1'
       },
       'warning': {
-        bg: '#fff3e0 !important',
-        border: '#ff9800 !important',
-        color: '#e65100 !important'
+        bg: '#fff3e0',
+        border: '#ff9800',
+        color: '#e65100'
       },
       'success': {
-        bg: '#e8f5e8 !important',
-        border: '#4caf50 !important',
-        color: '#2e7d32 !important'
+        bg: '#e8f5e8',
+        border: '#4caf50',
+        color: '#2e7d32'
       },
       'error': {
-        bg: '#ffebee !important',
-        border: '#f44336 !important',
-        color: '#c62828 !important'
+        bg: '#ffebee',
+        border: '#f44336',
+        color: '#c62828'
       },
       'transparent': {
-        bg: 'transparent !important',
-        border: 'transparent !important',
-        color: 'inherit !important'
+        bg: 'transparent',
+        border: 'transparent',
+        color: 'inherit'
       },
       'default': {
-        bg: '#f5f5f5 !important',
-        border: '#757575 !important',
-        color: '#424242 !important'
+        bg: '#f5f5f5',
+        border: '#757575',
+        color: '#424242'
       }
     }
 
     const config = styleConfigs[messageStyle] || styleConfigs['default']
 
-    // スタイルオブジェクトを作成
-    const styles: { [key: string]: string } = {
-      ...baseStyles,
-      'font-size': selectedFontSize,
-      'background-color': config.bg,
-      'border-left-color': config.border,
-      'color': config.color
-    }
+    // 基本スタイル
+    let styles = [
+      'display: block !important',
+      'visibility: visible !important',
+      'opacity: 1 !important',
+      'margin: 15px 0 !important',
+      'padding: 15px !important',
+      'border-radius: 8px !important',
+      'position: relative !important',
+      'line-height: 1.6 !important',
+      'z-index: 1000 !important',
+      'width: auto !important',
+      'max-width: 100% !important',
+      'height: auto !important',
+      'box-sizing: border-box !important',
+      `font-size: ${selectedFontSize} !important`,
+      `background-color: ${config.bg} !important`,
+      `color: ${config.color} !important`
+    ]
 
-    // transparent スタイルの場合の特別処理
+    // transparent スタイルの特別処理
     if (messageStyle === 'transparent') {
-      styles['border-left'] = 'none !important'
-      styles['padding-left'] = '0 !important'
+      styles.push('border-left: none !important')
+      styles.push('padding-left: 0 !important')
+    } else {
+      styles.push(`border-left: 4px solid ${config.border} !important`)
     }
 
-    // CSSテキストとして結合
-    return Object.entries(styles)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('; ')
+    return styles.join('; ')
   }
 
-  // DOM の準備を待つ関数
+  // DOM の準備を待つ関数（待機時間を延長）
   async function waitForDOMReady(): Promise<void> {
-    const maxAttempts = 10
+    const maxAttempts = 20  // 10から20に増加
     let attempts = 0
 
     return new Promise((resolve) => {
@@ -253,17 +274,19 @@ function register(options: RegisterClientOptions) {
         const videoInfo = document.querySelector('my-video-watch-video-info')
         const videoDetails = document.querySelector('.video-info')
         const description = document.querySelector('.video-info-description')
+        const mainCol = document.querySelector('.main-col, main')
         
         console.log(`Admin Message Plugin: DOM check attempt ${attempts}:`, {
           videoInfo: !!videoInfo,
           videoDetails: !!videoDetails,
-          description: !!description
+          description: !!description,
+          mainCol: !!mainCol
         })
 
-        if (videoInfo || videoDetails || description || attempts >= maxAttempts) {
+        if (videoInfo || videoDetails || description || mainCol || attempts >= maxAttempts) {
           resolve()
         } else {
-          setTimeout(checkDOM, 500)
+          setTimeout(checkDOM, 300)  // 500msから300msに短縮
         }
       }
       
@@ -271,7 +294,7 @@ function register(options: RegisterClientOptions) {
     })
   }
 
-  // Markdownパーサー関数（簡略版）
+  // Markdownパーサー関数
   function parseMarkdownToHtml(markdown: string): string {
     if (!markdown) return ''
     
@@ -284,11 +307,19 @@ function register(options: RegisterClientOptions) {
     html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
     html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
     
+    // 太字
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    
     // リンク
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     
-    // URL自動リンク
+    // URL自動リンク（メールアドレスも）
     html = html.replace(/(^|[^"])(https?:\/\/[^\s<>"']+)/gi, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    html = html.replace(/(^|[^">])([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '$1<a href="mailto:$2">$2</a>')
+    
+    // リスト
+    html = html.replace(/^\- (.+)$/gm, '<li>$1</li>')
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
     
     // 改行を<br>に
     html = html.replace(/\n/g, '<br>')
@@ -301,16 +332,34 @@ function register(options: RegisterClientOptions) {
     
     logDOMStructure()
     
-    switch (position) {
-      case 'before-description':
-        return insertBeforeDescription(messageElement)
-      case 'after-description':
-        return insertAfterDescription(messageElement)
-      case 'after-comments':
-        return insertAfterComments(messageElement)
-      default:
-        return insertBeforeDescription(messageElement)
+    // 複数回試行する
+    const maxRetries = 3
+    for (let i = 0; i < maxRetries; i++) {
+      let success = false
+      
+      switch (position) {
+        case 'before-description':
+          success = insertBeforeDescription(messageElement)
+          break
+        case 'after-description':
+          success = insertAfterDescription(messageElement)
+          break
+        case 'after-comments':
+          success = insertAfterComments(messageElement)
+          break
+        default:
+          success = insertAfterDescription(messageElement)
+      }
+      
+      if (success) {
+        return true
+      }
+      
+      console.log(`Admin Message Plugin: Retry ${i + 1}/${maxRetries}`)
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
+    
+    return false
   }
 
   function logDOMStructure() {
@@ -324,7 +373,9 @@ function register(options: RegisterClientOptions) {
       '.video-info-first-row',
       'my-video-description',
       'my-video-comments',
-      '.comments'
+      '.comments',
+      '.main-col',
+      'main'
     ]
 
     selectors.forEach(selector => {
@@ -339,8 +390,8 @@ function register(options: RegisterClientOptions) {
 
   function insertBeforeDescription(messageElement: HTMLElement): boolean {
     const selectors = [
-      '.video-info-name',
       '.video-info-first-row',
+      '.video-info-name',
       'my-video-watch-video-info .video-info-name'
     ]
 
@@ -353,14 +404,7 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
-    if (videoInfo) {
-      videoInfo.appendChild(messageElement)
-      console.log('Admin Message Plugin: Appended to video info container')
-      return true
-    }
-
-    return false
+    return insertFallback(messageElement)
   }
 
   function insertAfterDescription(messageElement: HTMLElement): boolean {
@@ -379,28 +423,7 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    const videoInfo = document.querySelector('my-video-watch-video-info, .video-info')
-    if (videoInfo) {
-      videoInfo.appendChild(messageElement)
-      console.log('Admin Message Plugin: Appended to video info container as fallback')
-      return true
-    }
-
-    const mainCol = document.querySelector('.main-col, main')
-    if (mainCol) {
-      const comments = document.querySelector('my-video-comments, .comments')
-      if (comments) {
-        mainCol.insertBefore(messageElement, comments)
-        console.log('Admin Message Plugin: Inserted before comments as final fallback')
-      } else {
-        mainCol.appendChild(messageElement)
-        console.log('Admin Message Plugin: Appended to main column as ultimate fallback')
-      }
-      return true
-    }
-
-    console.error('Admin Message Plugin: Could not find suitable insertion point')
-    return false
+    return insertFallback(messageElement)
   }
 
   function insertAfterComments(messageElement: HTMLElement): boolean {
@@ -419,13 +442,41 @@ function register(options: RegisterClientOptions) {
       }
     }
 
-    const mainCol = document.querySelector('.main-col, main')
-    if (mainCol) {
-      mainCol.appendChild(messageElement)
-      console.log('Admin Message Plugin: Appended to main column')
+    return insertFallback(messageElement)
+  }
+
+  function insertFallback(messageElement: HTMLElement): boolean {
+    // フォールバック: my-video-watch-video-info に追加
+    const videoInfo = document.querySelector('my-video-watch-video-info')
+    if (videoInfo) {
+      videoInfo.appendChild(messageElement)
+      console.log('Admin Message Plugin: Appended to my-video-watch-video-info')
       return true
     }
 
+    // フォールバック2: .video-info に追加
+    const videoInfoDiv = document.querySelector('.video-info')
+    if (videoInfoDiv) {
+      videoInfoDiv.appendChild(messageElement)
+      console.log('Admin Message Plugin: Appended to .video-info')
+      return true
+    }
+
+    // フォールバック3: main-col に追加
+    const mainCol = document.querySelector('.main-col, main')
+    if (mainCol) {
+      const comments = document.querySelector('my-video-comments, .comments')
+      if (comments) {
+        mainCol.insertBefore(messageElement, comments)
+        console.log('Admin Message Plugin: Inserted before comments in main-col')
+      } else {
+        mainCol.appendChild(messageElement)
+        console.log('Admin Message Plugin: Appended to main-col')
+      }
+      return true
+    }
+
+    console.error('Admin Message Plugin: Could not find suitable insertion point')
     return false
   }
 }

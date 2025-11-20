@@ -294,7 +294,7 @@ function register(options: RegisterClientOptions) {
     })
   }
 
-  // Markdownパーサー関数
+  // Markdownパーサー関数（斜体対応を追加）
   function parseMarkdownToHtml(markdown: string): string {
     if (!markdown) return ''
     
@@ -307,8 +307,13 @@ function register(options: RegisterClientOptions) {
     html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
     html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
     
-    // 太字
+    // 太字（先に処理）
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>')
+    
+    // 斜体（太字の後に処理）
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
+    html = html.replace(/_(.+?)_/g, '<em>$1</em>')
     
     // リンク
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
